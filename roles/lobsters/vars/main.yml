@@ -8,12 +8,19 @@ required_packages:
   - libjemalloc2
   - libc-dev
   - libffi-dev
-  - libvips
+  - libvips-dev
   - libyaml-dev
-  - libmysqlclient-dev
+  - libmariadb-dev-compat
+  - libmariadb-dev
+  - libsqlite3-dev
+  - libssl-dev
+  - libreadline-dev
+  - zlib1g-dev
   - make
   - mariadb-client
   - nodejs
+  - pkg-config
   - rbenv
   - ruby-build
   - rustc
+  - wrk

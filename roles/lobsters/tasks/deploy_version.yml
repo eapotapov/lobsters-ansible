@@ -1,0 +1,80 @@
+- name: "{{ version.name }} - create directories"
+  file:
+    state: directory
+    path: "{{ lobsters_home }}/{{ version.name }}/{{ item }}"
+    owner: "{{ lobsters_user }}"
+    group: "{{ lobsters_user }}"
+    mode: "0755"
+  with_items:
+    - ""
+    - log
+    - tmp
+    - tmp/cache
+
+- name: "{{ version.name }} - git clone"
+  become: true
+  become_user: "{{ lobsters_user }}"
+  git:
+    repo: "{{ version.repo }}"
+    dest: "{{ lobsters_home }}/{{ version.name }}"
+    version: "{{ version.commit }}"
+    force: yes
+
+- name: "{{ version.name }} - install database.yml"
+  template:
+    src: "database-{{ version.db_adapter }}.yml.j2"
+    dest: "{{ lobsters_home }}/{{ version.name }}/config/database.yml"
+    owner: "{{ lobsters_user }}"
+    group: "{{ lobsters_user }}"
+    mode: "0644"
+
+- name: "{{ version.name }} - allow all hosts in development.rb"
+  lineinfile:
+    path: "{{ lobsters_home }}/{{ version.name }}/config/environments/development.rb"
+    insertafter: "Rails.application.configure do"
+    line: "  config.hosts.clear"
+    state: present
+
+- name: "{{ version.name }} - bundle install"
+  become: true
+  become_user: "{{ lobsters_user }}"
+  shell: ~/.rbenv/shims/bundle install
+  args:
+    chdir: "{{ lobsters_home }}/{{ version.name }}"
+  environment:
+    RAILS_ENV: development
+
+- name: "{{ version.name }} - db:setup"
+  become: true
+  become_user: "{{ lobsters_user }}"
+  shell: ~/.rbenv/shims/bundle exec rails db:setup
+  args:
+    chdir: "{{ lobsters_home }}/{{ version.name }}"
+  environment:
+    RAILS_ENV: development
+  ignore_errors: yes
+
+- name: "{{ version.name }} - populate with fake data"
+  become: true
+  become_user: "{{ lobsters_user }}"
+  shell: echo "y" | ~/.rbenv/shims/bundle exec rails fake_data
+  args:
+    chdir: "{{ lobsters_home }}/{{ version.name }}"
+  environment:
+    RAILS_ENV: development
+  ignore_errors: yes
+
+- name: "{{ version.name }} - install puma service"
+  template:
+    src: "lobsters-puma.service.j2"
+    dest: "/etc/systemd/system/{{ version.name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "{{ version.name }} - enable and start service"
+  systemd:
+    name: "{{ version.name }}"
+    enabled: yes
+    daemon_reload: yes
+    state: started

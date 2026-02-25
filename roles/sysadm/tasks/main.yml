@@ -1,70 +1,28 @@
 - include_tasks: apt.yml
 
-- include_tasks: aleph.yml
-  when: "env == 'staging' or 'mockturtle' in group_names"
-
-- include_tasks: hmadison.yml
-  when: "env == 'staging' or 'mockturtle' in group_names"
-
-- include_tasks: pushcx.yml
-
 - name: configure root bashrc
-  become: yes
   template:
     src: root_bashrc.j2
     dest: "/root/.bashrc"
     mode: '0644'
   tags: configuration
 
-- name: copy up motd config
-  copy: >
-    src=update-motd.d/50-landscape-sysinfo
-    dest=/etc/update-motd.d/50-landscape-sysinfo
-    owner=root
-    group=root
-    mode="0644"
-
-- name: copy up sshd config
-  copy: >
-    src=ssh/50-lastlog.conf
-    dest=/etc/ssh/sshd_config.d
-    owner=root
-    group=root
-    mode="0644"
-
 - name: copy up logrotate config
-  copy: >
-    src="{{ item.file }}"
-    dest="{{ item.dest }}"
-    owner=root
-    group=root
-    mode="0644"
+  copy:
+    src: "{{ item.file }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
   with_items:
     - { dest: "/etc", file: "logrotate.conf" }
     - { dest: "/root", file: ".inputrc" }
     - { dest: "/root", file: ".editrc" }
 
 - name: copy up logrotate.d
-  copy: src="logrotate.d" dest="/etc/" owner=root group=root mode="0644"
-
-- name: remove logrotate package's cron job
-  file:
-    path: /etc/cron.daily/logrotate
-    state: absent
-
-# https://help.ubuntu.com/community/AutomaticSecurityUpdates
-# https://github.com/artefactual-labs/ansible-unattended-upgrades/blob/master/tasks/main.yml
-- name: "Create apt file that would be made by interactive dpkg-reconfigure"
-  file:
-    path: "/etc/apt/apt.conf.d/20auto-upgrades"
-    owner: "root"
-    group: "root"
+  copy:
+    src: logrotate.d
+    dest: /etc/
+    owner: root
+    group: root
     mode: "0644"
-    state: "touch"
-- name: "Populate 20auto-upgrades apt file"
-  lineinfile:
-    dest: "/etc/apt/apt.conf.d/20auto-upgrades"
-    line: '{{item}}'
-  with_items:
-    - 'APT::Periodic::Update-Package-Lists "1";'
-    - 'APT::Periodic::Unattended-Upgrade "1";'

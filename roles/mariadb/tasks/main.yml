@@ -17,15 +17,15 @@
 - name: Use new config
   when: mariadb_config.changed
   systemd:
-    name: mysql
+    name: mariadb
     state: restarted
 
 - name: Enable mariadb at startup
   systemd:
-    name: mysql
+    name: mariadb
     enabled: yes
 
-- name: create dir for overly why does ansible make this an extra step
+- name: create dir for systemd override
   file:
     path: /etc/systemd/system/mariadb.service.d
     state: directory
@@ -38,12 +38,17 @@
     group: root
     mode: 0600
 
-- name: add crontab entry for backups
-  tags: cron
-  cron: >
-    state=present
-    name=restic
-    user=root
-    minute="31"
-    hour="*/6"
-    job="/bin/bash -c 'source /etc/restic-env ; restic self-update ; mariadb-backup --backup --user=root --stream=xbstream 2> mariadb-backup.log | restic backup --stdin --stdin-filename mariadb.xb --tag mariadb'"
+- name: Create lobsters database
+  community.mysql.mysql_db:
+    name: lobsters_current
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock
+
+- name: Create lobsters MariaDB user
+  community.mysql.mysql_user:
+    name: lobsters
+    password: lobsters
+    host: "{{ app_private_ip }}"
+    priv: "lobsters_current.*:ALL"
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock

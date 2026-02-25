@@ -1,0 +1,32 @@
+db_host: 10.116.0.3
+db_private_ip: 10.116.0.3
+app_private_ip: 10.116.0.2
+
+lobsters_user: lobsters
+lobsters_home: /srv/lobsters
+
+# Three versions to deploy
+versions:
+  - name: lobsters-current
+    repo: https://github.com/lobsters/lobsters.git
+    commit: 9b736939954b959ca85e9962dedb6baaa0565111
+    port: 3001
+    db_adapter: trilogy
+    db_name: lobsters_current
+    hostname: lobsters-current
+
+  - name: lobsters-sqlite
+    repo: https://github.com/lobsters/lobsters.git
+    commit: 74544e966924b948e9f411cc0bf11949ef0e03c2
+    port: 3002
+    db_adapter: sqlite3
+    db_name: null
+    hostname: lobsters-sqlite
+
+  - name: lobsters-sqlite-fixed
+    repo: https://github.com/eapotapov/lobsters-sqlite-fix.git
+    commit: 936ccb69205060c0912970ccff22b9aaae513927
+    port: 3003
+    db_adapter: sqlite3
+    db_name: null
+    hostname: lobsters-sqlite-fixed

@@ -2,199 +2,75 @@
 
 - name: groupadd lobsters
   tags: user
-  group: name=lobsters gid=1024 state=present
+  group:
+    name: "{{ lobsters_user }}"
+    state: present
 
 - name: useradd lobsters
   tags: user
-  user: >
-    name=lobsters
-    comment='lobste.rs'
-    group=lobsters
-    home='/srv/lobste.rs'
-    shell='/bin/bash'
-    state=present
-    uid=1024
+  user:
+    name: "{{ lobsters_user }}"
+    comment: "Lobsters Study"
+    group: "{{ lobsters_user }}"
+    home: "{{ lobsters_home }}"
+    shell: /bin/bash
+    state: present
 
 - name: home perms
   tags: user
   file:
-    path: /srv/lobste.rs/
+    path: "{{ lobsters_home }}/"
     state: directory
-    mode: 0755
+    mode: "0755"
 
-- name: mkdir ~lobste.rs/ dirs
-  file: >
-    state=directory
-    path="/srv/lobste.rs/{{ item }}"
-    owner=lobsters
-    group=lobsters
-    mode="0755"
-  with_items:
-  - db
-  - log
-  - storage
+- name: cp bash_profile
+  copy:
+    src: bash_profile
+    dest: "{{ lobsters_home }}/.bash_profile"
+    owner: "{{ lobsters_user }}"
+    group: "{{ lobsters_user }}"
+    mode: "0644"
 
-- name: mkdir ~lobste.rs/.%
-  file: >
-    state=directory
-    path="/srv/lobste.rs/.{{ item.file }}"
-    owner=lobsters
-    group=lobsters
-    mode="{{ item.mode }}"
-  with_items:
-  - { file: 'ssh', mode: '02700' }
-
-- name: cp % ~lobsters/.%
-  copy: >
-    src="{{ item.file }}"
-    dest="/srv/lobste.rs/.{{ item.file }}"
-    owner=lobsters
-    group=lobsters
-    mode={{ item.mode }}
-  with_items:
-    - { file: 'ssh/known_hosts', mode: '0600' }
-    - { file: 'bashrc', mode: '0644' }
-    - { file: 'bash_profile', mode: '0644' }
-    - { file: 'forward', mode: '0644' }
-
-- name: git clone lobsters
+- name: get recent ruby-build versions
   become: true
-  become_user: lobsters
-  register: clone
-  git: >
-    repo='https://github.com/lobsters/lobsters.git'
-    dest='/srv/lobste.rs/http'
-    force=yes
+  become_user: "{{ lobsters_user }}"
+  git:
+    repo: https://github.com/rbenv/ruby-build.git
+    dest: "{{ lobsters_home }}/.rbenv/plugins/ruby-build"
+    force: yes
 
-- name: mkdir ~lobste.rs/%
-  file: >
-    state=directory
-    path="/srv/lobste.rs/{{ item.file }}/"
-    owner=lobsters
-    group=lobsters
-    mode="{{ item.mode }}"
-  with_items:
-    - { file: '.bundle', mode: '0755' }
-    - { file: 'http', mode: '0755' }
-    - { file: 'run',  mode: '0755' }
-    - { file: 'log',  mode: '0755' }
-    - { file: 'http/tmp',  mode: '0775' }
-    - { file: 'http/tmp/cache',  mode: '0775' }
-
-- name: cp ~/.bundle/config
-  copy: >
-    src=bundle-config
-    dest="/srv/lobste.rs/.bundle/config"
-    owner=lobsters
-    group=lobsters
-    mode=0644
-
-- name: get recent versions, aykm ubuntu
+- name: Clone first version for rbenv ruby detection
   become: true
-  become_user: lobsters
-  git: >
-    repo=https://github.com/rbenv/ruby-build.git
-    dest=/srv/lobste.rs/.rbenv/plugins/ruby-build
-    force=yes
+  become_user: "{{ lobsters_user }}"
+  git:
+    repo: "{{ versions[0].repo }}"
+    dest: "{{ lobsters_home }}/{{ versions[0].name }}"
+    version: "{{ versions[0].commit }}"
+    force: yes
 
 - name: install ruby via rbenv
   become: true
-  become_user: lobsters
+  become_user: "{{ lobsters_user }}"
   shell: rbenv install --skip-existing
-  register: bundler
   environment:
     RUBY_CONFIGURE_OPTS: --enable-yjit
   args:
-    chdir: "/srv/lobste.rs/http/"
+    chdir: "{{ lobsters_home }}/{{ versions[0].name }}"
 
-- name: bundle install
+- name: Deploy each Lobsters version
+  include_tasks: deploy_version.yml
+  loop: "{{ versions }}"
+  loop_control:
+    loop_var: version
+
+- name: Update test user password for each version
   become: true
-  become_user: lobsters
-  shell: ~/.rbenv/shims/bundle install
-  register: bundler
-  changed_when: "'Installing' in bundler or 'Updating' in bundler or 'upgrade' in bundler"
-  args:
-    chdir: "/srv/lobste.rs/http/"
-
-- name: update config/database.yml
-  register: database_config
-  template:
-    src: "database.yml.j2"
-    dest: "/srv/lobste.rs/http/config/database.yml"
-    force: no
-    owner: lobsters
-    group: lobsters
-
-- name: migrate database
-  when: clone.changed
-  become: true
-  become_user: lobsters
+  become_user: "{{ lobsters_user }}"
+  shell: |
+    cd {{ lobsters_home }}/{{ item.name }}
+    ~/.rbenv/shims/bundle exec rails runner \
+      "u = User.find_by(username: 'test'); u.password = 'testtest'; u.password_confirmation = 'testtest'; u.save!"
   environment:
-    RAILS_ENV: "{{ env }}"
-  command: ~/.rbenv/shims/bundle exec rails db:migrate
-  args:
-    chdir: "/srv/lobste.rs/http/"
-
-- name: recompile assets
-  when: clone.changed or bundler.changed
-  become: true
-  become_user: lobsters
-  environment:
-    RAILS_ENV: "{{ env }}"
-  command: ~/.rbenv/shims/bundle exec rails assets:precompile
-  args:
-    chdir: "/srv/lobste.rs/http/"
-
-# https://github.com/puma/puma/blob/master/docs/restart.md
-# phased restart when only the app code changes
-- name: phased restart puma
-  when:
-    - clone.changed
-    - not bundler.changed
-  systemd: >
-    name="lobsters-puma"
-    state=reloaded
-
-# hot restart to pick up bundle changes
-- name: restart puma
-  when:
-    - bundler.changed
-  systemd: >
-    name="lobsters-puma"
-    state=restarted
-
-- name: cp 5m maintenance job
-  template: >
-    src="sbin/lobsters-cron.j2"
-    dest="/srv/lobste.rs/http/script/lobsters-cron"
-    owner=lobsters
-    group=lobsters
-    mode='0755'
-
-- name: add crontab entry for maintenance job
-  tags: cron
-  cron: >
-    state=present
-    name=lobsters-cron
-    user=lobsters
-    minute="*/5"
-    job="/bin/bash -c 'export PATH=\"$HOME/.rbenv/bin:$PATH\" ; eval \"$(/usr/bin/env rbenv init -)\" ; /srv/lobste.rs/http/script/lobsters-cron'"
-
-- name: page expiration cron job
-  tags: cron
-  cron: >
-    state=present
-    name=lobsters-page-expiration
-    user=lobsters
-    minute="*"
-    job=/srv/lobste.rs/http/script/expire_page_cache
-
-- name: add crontab entry for backups
-  tags: cron
-  cron: >
-    state=present
-    name=restic
-    user=root
-    minute="11"
-    hour="0"
-    job="/bin/bash -c 'source /etc/restic-env ; restic self-update ; restic backup --cleanup-cache --no-scan /etc /srv/lobste.rs/http/config /srv/lobste.rs/log /srv/lobste.rs/storage'"
+    RAILS_ENV: development
+  loop: "{{ versions }}"
+  ignore_errors: yes

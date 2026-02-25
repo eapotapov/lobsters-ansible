@@ -1,0 +1,20 @@
+[Unit]
+Description=Lobsters {{ version.name }} (port {{ version.port }})
+After=network.target
+
+[Service]
+Type=simple
+User={{ lobsters_user }}
+Group={{ lobsters_user }}
+WorkingDirectory={{ lobsters_home }}/{{ version.name }}
+SyslogIdentifier={{ version.name }}
+
+Restart=on-failure
+RestartSec=10
+
+Environment=RAILS_ENV=development
+Environment=RUBYOPT='--yjit'
+ExecStart={{ lobsters_home }}/.rbenv/shims/bundle exec puma -b tcp://0.0.0.0:{{ version.port }}
+
+[Install]
+WantedBy=multi-user.target

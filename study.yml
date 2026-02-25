@@ -1,0 +1,24 @@
+---
+- name: Base system setup
+  tags: sysadm
+  hosts: all
+  roles:
+    - { role: sysadm }
+
+- name: MariaDB server
+  tags: mariadb
+  hosts: db_server
+  roles:
+    - { role: mariadb }
+
+- name: App server setup
+  tags: app
+  hosts: app
+  roles:
+    - { role: lobsters }
+
+- name: Nginx reverse proxy
+  tags: nginx
+  hosts: app
+  roles:
+    - { role: nginx }
