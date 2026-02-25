@@ -63,15 +63,3 @@
   loop_control:
     loop_var: version
 
-- name: Update test user password for each version
-  become: true
-  become_user: "{{ lobsters_user }}"
-  shell: |
-    cd {{ lobsters_home }}/{{ item.name }}
-    ~/.rbenv/shims/bundle exec rails runner \
-      "u = User.find_by(username: 'test'); u.password = 'testtest'; u.password_confirmation = 'testtest'; u.save!"
-  environment:
-    RAILS_ENV: development
-  loop: "{{ versions }}"
-  ignore_errors: yes
-  tags: [seed]

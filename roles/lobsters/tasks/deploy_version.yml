@@ -44,28 +44,6 @@
   environment:
     RAILS_ENV: development
 
-- name: "{{ version.name }} - db:setup"
-  become: true
-  become_user: "{{ lobsters_user }}"
-  shell: ~/.rbenv/shims/bundle exec rails db:setup
-  args:
-    chdir: "{{ lobsters_home }}/{{ version.name }}"
-  environment:
-    RAILS_ENV: development
-  ignore_errors: yes
-  tags: [seed]
-
-- name: "{{ version.name }} - populate with fake data"
-  become: true
-  become_user: "{{ lobsters_user }}"
-  shell: echo "y" | ~/.rbenv/shims/bundle exec rails fake_data
-  args:
-    chdir: "{{ lobsters_home }}/{{ version.name }}"
-  environment:
-    RAILS_ENV: development
-  ignore_errors: yes
-  tags: [seed]
-
 - name: "{{ version.name }} - install puma service"
   template:
     src: "lobsters-puma.service.j2"
