@@ -53,6 +53,7 @@
   environment:
     RAILS_ENV: development
   ignore_errors: yes
+  tags: [seed]
 
 - name: "{{ version.name }} - populate with fake data"
   become: true
@@ -63,6 +64,7 @@
   environment:
     RAILS_ENV: development
   ignore_errors: yes
+  tags: [seed]
 
 - name: "{{ version.name }} - install puma service"
   template:

@@ -74,3 +74,4 @@
     RAILS_ENV: development
   loop: "{{ versions }}"
   ignore_errors: yes
+  tags: [seed]
