@@ -57,6 +57,19 @@
   args:
     chdir: "{{ lobsters_home }}/{{ versions[0].name }}"
 
+- name: install rust via rustup
+  become: true
+  become_user: "{{ lobsters_user }}"
+  shell: |
+    if [ -f "$HOME/.cargo/env" ]; then
+      . "$HOME/.cargo/env"
+      rustup update stable
+    else
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    fi
+  args:
+    creates: "{{ lobsters_home }}/.cargo/bin/rustc"
+
 - name: Deploy each Lobsters version
   include_tasks: deploy_version.yml
   loop: "{{ versions }}"

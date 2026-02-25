@@ -22,6 +22,5 @@ required_packages:
   - pkg-config
   - rbenv
   - ruby-build
-  - rustc
-  - cargo
+  - libclang-dev
   - wrk

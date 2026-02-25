@@ -38,7 +38,7 @@
 - name: "{{ version.name }} - bundle install"
   become: true
   become_user: "{{ lobsters_user }}"
-  shell: ~/.rbenv/shims/bundle install
+  shell: PATH="$HOME/.cargo/bin:$PATH" ~/.rbenv/shims/bundle install
   args:
     chdir: "{{ lobsters_home }}/{{ version.name }}"
   environment:
