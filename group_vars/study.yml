@@ -13,7 +13,7 @@ versions:
     port: 3001
     db_adapter: trilogy
     db_name: lobsters_current
-    hostname: lobsters-current
+    hostname: lobsters-mariadb.eapotapov.dev
 
   - name: lobsters-sqlite
     repo: https://github.com/lobsters/lobsters.git
@@ -21,7 +21,7 @@ versions:
     port: 3002
     db_adapter: sqlite3
     db_name: null
-    hostname: lobsters-sqlite
+    hostname: lobsters-1871.eapotapov.dev
 
   - name: lobsters-sqlite-fixed
     repo: https://github.com/eapotapov/lobsters-sqlite-fix.git
@@ -29,4 +29,4 @@ versions:
     port: 3003
     db_adapter: sqlite3
     db_name: null
-    hostname: lobsters-sqlite-fixed
+    hostname: lobsters-1927.eapotapov.dev
