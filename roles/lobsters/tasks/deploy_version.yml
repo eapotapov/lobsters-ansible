@@ -1,16 +1,3 @@
-- name: "{{ version.name }} - create directories"
-  file:
-    state: directory
-    path: "{{ lobsters_home }}/{{ version.name }}/{{ item }}"
-    owner: "{{ lobsters_user }}"
-    group: "{{ lobsters_user }}"
-    mode: "0755"
-  with_items:
-    - ""
-    - log
-    - tmp
-    - tmp/cache
-
 - name: "{{ version.name }} - git clone"
   become: true
   become_user: "{{ lobsters_user }}"
@@ -19,6 +6,18 @@
     dest: "{{ lobsters_home }}/{{ version.name }}"
     version: "{{ version.commit }}"
     force: yes
+
+- name: "{{ version.name }} - create extra directories"
+  file:
+    state: directory
+    path: "{{ lobsters_home }}/{{ version.name }}/{{ item }}"
+    owner: "{{ lobsters_user }}"
+    group: "{{ lobsters_user }}"
+    mode: "0755"
+  with_items:
+    - log
+    - tmp
+    - tmp/cache
 
 - name: "{{ version.name }} - install database.yml"
   template:
