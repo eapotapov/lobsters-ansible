@@ -23,4 +23,5 @@ required_packages:
   - rbenv
   - ruby-build
   - rustc
+  - cargo
   - wrk
