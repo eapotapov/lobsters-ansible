@@ -6,6 +6,11 @@ server {
     access_log /var/log/nginx/{{ version.name }}.access.log;
     error_log /var/log/nginx/{{ version.name }}.error.log;
 
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+
     location / {
         proxy_pass http://127.0.0.1:{{ version.port }};
         proxy_set_header Host $host;
